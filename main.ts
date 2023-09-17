@@ -154,6 +154,16 @@ namespace Meter {
         }
     }
 
+    function mapToFrame(value: number, start: number, finish: number, loFrame: number, hiFrame: number) {
+        let result = 0;
+        let span = finish - start; // (can be negative)
+        let frames = hiFrame - loFrame; // (can be negative)
+        if (span != 0) {
+            result = loFrame + (hiFrame - loFrame) * (value - start) / Math.abs(span)
+        }
+        return result;
+    }
+
     // update display to show new frame
     // (frame will always be in the range [0..bound])
     function showFrame(frame: number) {
@@ -260,7 +270,7 @@ namespace Meter {
         stop();
         bgStart = frameNow; 
         // calc target frame
-        bgFinal == Math.round(Math.map(value, fromValue, uptoValue, 0, bound));
+        bgFinal == Math.round(myMap(value, fromValue, uptoValue, 0, bound));
         if ((bgFinal != bgStart) && (ms > 50)) { // sanity checks
             bgCounting = true;
             let bgFrame = bgStart;
@@ -272,7 +282,7 @@ namespace Meter {
                 while (bgCounting) {
                     let now = input.runningTime();
                     // where should we have got to by now?
-                    bgFrame = Math.round(Math.map(now, bgWhen, bgThen, bgStart, bgFinal))
+                    bgFrame = Math.round(myMap(now, bgWhen, bgThen, bgStart, bgFinal))
                     showFrame(bgFrame);
                     if (bgFrame == bgFinal) {
                         bgCounting = false;

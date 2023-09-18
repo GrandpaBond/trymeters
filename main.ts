@@ -247,7 +247,7 @@ namespace Meter {
         bgCounting = false;
         litMap = 0;
         styleIs = style;
-        show(start);
+        // show(start);
     }
 
     //% block="show meter value= $value" 
@@ -371,7 +371,7 @@ for (let i = 0; i < 100; i++) {
 basic.pause(1000);
 ***/
 
-Meter.use(STYLES.TIDAL, 0, 99);
+Meter.use(STYLES.DIAL, 0, 99);
 basic.pause(1000);
 basic.clearScreen();
 Meter.change(75, 500);

@@ -1,17 +1,18 @@
-METERS  :  adding values to your project!
+**METERS  :  adding values to your project!
 
 This is an extension providing a selection of different visual indicators to let you monitor a changing value.
 
 Meters.use(style, start, limit)
   -- style -  chooses the indicator type (see below)
   -- start - is the value that maps to the bottom reading
-  --  limit - is the value that maps to the top reading
+  -- limit - is the value that maps to the top reading
 
 NOTE: It is quite permissible for start to exceed limit, or for either (or both) to be negative. 
 
 Meters.show(value, animate, ms)
   -- value - is the new value to be indicated 
-  --  animate (optional) if true, shows intermediate values leading to the new value after ms millisecs. This background animation only occurs if ms exceeds 50ms.
+  -- animate (optional) if true, shows intermediate values leading to the new value after ms millisecs. 
+  This background animation only occurs if ms exceeds 50ms.
 
 Range-checks
 An attempt to show a value that is outside the [start...limit] range will be constrained to the nearest bound but will flash to indicate out-of-range.
@@ -40,7 +41,11 @@ DIGITAL:
 Unlike the other analog displays, this meter style gives a direct 2-digit readout of the value, which should lie in the range  [0...99]
 (When selected, using Meter.use(), the start and limit values are ignored.) 
 
-NOTE:  Since each digit must be represented in only 10 pixels, they are somewhat stylized,  and take a bit of practice to read accurately!
+NOTE:  Since each digit must be represented in only 10 pixels, they are somewhat stylized, and take a bit of practice to read accurately!
+
+
+
+
 
 > Open this page at [https://grandpabond.github.io/trymeters/](https://grandpabond.github.io/trymeters/)
 

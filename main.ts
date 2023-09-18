@@ -250,7 +250,7 @@ namespace Meter {
         // show(start);
     }
 
-    //% block="show meter value= $value" 
+    //% block="show meter value= $value" // eventually add: || animated? $animate, over $ms ms" 
     //% weight=30 
     export function show(value: number) {
         rangeError = false;
@@ -271,14 +271,6 @@ namespace Meter {
         valueNow = value;
     }
 
-    //% block="Stop animation" 
-    //% weight=40 
-    export function stop() {
-        bgCounting = false;
-        rangeError = false;
-        pause(10);
-    }
-
     //% block="Wait for animation" 
     //% weight=50 
     export function wait() {
@@ -287,9 +279,18 @@ namespace Meter {
         }
     }
 
+   
+    //% block="Stop animation or error flashing" 
+    //% weight=40 
+    export function reset() {
+        bgCounting = false;
+        rangeError = false;
+        pause(10);
+    }
+
     //% block="change meter to $value over $ms ms" 
     //% weight=35
-    export function change(value: number, ms: number) {
+    export function changeTo(value: number, ms: number) {
         bgStart = frameNow; 
         // calc target frame
         bgFinal = mapToFrame(value, fromValue, uptoValue, 0, bound);
@@ -374,16 +375,16 @@ basic.pause(1000);
 Meter.use(STYLES.DIAL, 0, 99);
 basic.pause(1000);
 basic.clearScreen();
-Meter.change(75, 500);
+Meter.changeTo(75, 500);
 Meter.wait();
 basic.pause(1000);
-Meter.change(50, 500);
+Meter.changeTo(50, 500);
 Meter.wait();
 basic.pause(1000);
-Meter.change(100, 500);
+Meter.changeTo(100, 500);
 Meter.wait();
 basic.pause(1000);
-Meter.change(0, 500);
+Meter.changeTo(0, 500);
 Meter.wait();
 basic.pause(1000);
 // Meter.show(-1);

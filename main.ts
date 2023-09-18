@@ -2,6 +2,8 @@
 enum STYLES {
     //% block="Blob"
     BLOB,
+    //% block="Spiral"
+    SPIRAL,
     //% block="Bar" 
     BAR,
     //% block="Dial" 
@@ -215,7 +217,7 @@ namespace Meter {
             case STYLES.DIAL:
                 break;
             case STYLES.DIGITAL:
-                mapSet = digitMaps;   // NOTE: only 10 frames!
+                mapSet = digitMaps; // NOTE: only 10 frames!
                 bound = digitBound; // ...combine to allow 100 values
                 break;
             case STYLES.NEEDLE:
@@ -229,6 +231,10 @@ namespace Meter {
             case STYLES.BLOB:
                 mapSet = blobMaps;
                 bound = blobBound;
+                break;
+            case STYLES.SPIRAL:
+                mapSet = spiralMaps;
+                bound = spiralBound;
                 break;
             case STYLES.TIDAL:
                 mapSet = tidalMaps;
@@ -273,12 +279,17 @@ namespace Meter {
         pause(10);
     }
 
+    //% block="Wait for animation" 
+    //% weight=50 
+    export function wait() {
+        while(bgCounting){
+            pause(10);
+        }
+    }
+
     //% block="change meter to $value over $ms ms" 
-    //% weight=40 
+    //% weight=35
     export function change(value: number, ms: number) {
-        /*
-        */
-        stop();
         bgStart = frameNow; 
         // calc target frame
         bgFinal = mapToFrame(value, fromValue, uptoValue, 0, bound);
@@ -294,8 +305,9 @@ namespace Meter {
             control.inBackground(function () {
                 while (bgCounting) {
                     let now = input.runningTime();
-                    // where should we have got to by now?
-                    bgFinal = mapToFrame(now, bgWhen, bgThen, bgStart, bgFinal); // (guaranteed to be in-range)
+                    // can't predict interrupts, so where should we have got to by now?
+                    bgFrame = mapToFrame(now, bgWhen, bgThen, bgStart, bgFinal);
+                    bgFrame = fixRange(bgFrame, 0, bound); // won'tab set rangeError!
                     showFrame(bgFrame);
                     if (bgFrame == bgFinal) {
                         bgCounting = false;
@@ -303,35 +315,44 @@ namespace Meter {
                     pause(bgTick);
                 }
             });
+        } else {
+            showFrame(bgFinal); // jump straight there
         }
     }
 }
-
+/****
 Meter.use(STYLES.BLOB, 0, 99);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
-    basic.pause(200);
+    basic.pause(100);
+}
+basic.pause(1000);
+
+Meter.use(STYLES.SPIRAL, 0, 99);
+for (let i = 0; i < 100; i++) {
+    Meter.show(i);
+    basic.pause(100);
 }
 basic.pause(1000);
 
 Meter.use(STYLES.BAR, 0, 99);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
-    basic.pause(200);
+    basic.pause(100);
 }
 basic.pause(1000); 
 
 Meter.use(STYLES.DIAL, 0, 99);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
-    basic.pause(200);
+    basic.pause(100);
 }
 basic.pause(1000); 
 
 Meter.use(STYLES.NEEDLE, 0, 99);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
-    basic.pause(200);
+    basic.pause(100);
 }
 basic.pause(1000); 
 
@@ -348,13 +369,28 @@ for (let i = 0; i < 100; i++) {
     basic.pause(200);
 }
 basic.pause(1000);
+***/
 
-Meter.use(STYLES.TIDAL, 0, 99);
-Meter.show(0)
+Meter.use(STYLES.SPIRAL, 0, 99);
+basic.pause(1000);
+basic.clearScreen();
 Meter.change(0, 500);
+Meter.wait();
+basic.clearScreen();
 Meter.change(75, 500);
+Meter.wait();
+basic.pause(1000);
+basic.clearScreen();
 Meter.change(50, 500);
+Meter.wait();
+basic.pause(1000);
+basic.clearScreen();
 Meter.change(100, 500);
+Meter.wait();
+basic.pause(1000);
+basic.clearScreen();
 Meter.show(-1);
+basic.pause(1000);
+basic.clearScreen();
 Meter.show(100);
 

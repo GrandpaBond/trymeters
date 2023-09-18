@@ -200,6 +200,7 @@ namespace Meter {
         let toToggle = newMap ^ litMap;   // see which pixels differ
         toggleColumnMap(toToggle);
         litMap = newMap;
+        frameNow = frame;
     }
 
     // EXPOSED USER INTERFACES  
@@ -258,8 +259,6 @@ namespace Meter {
         let frame = mapToFrame(value, fromValue, uptoValue, 0, bound);
         frame = fixRange(frame, 0, bound); // may set rangeError!
         showFrame(frame);
-        valueNow = value;
-        frameNow = frame;
         if (rangeError) {
         // initiate background flashing...
             control.inBackground(function () {
@@ -269,6 +268,7 @@ namespace Meter {
                 }
             });
         }
+        valueNow = value;
     }
 
     //% block="Stop animation" 
@@ -371,26 +371,23 @@ for (let i = 0; i < 100; i++) {
 basic.pause(1000);
 ***/
 
-Meter.use(STYLES.SPIRAL, 0, 99);
+Meter.use(STYLES.TIDAL, 0, 99);
 basic.pause(1000);
-basic.clearScreen();
-Meter.change(0, 500);
-Meter.wait();
 basic.clearScreen();
 Meter.change(75, 500);
 Meter.wait();
 basic.pause(1000);
-basic.clearScreen();
 Meter.change(50, 500);
 Meter.wait();
 basic.pause(1000);
-basic.clearScreen();
 Meter.change(100, 500);
 Meter.wait();
 basic.pause(1000);
-basic.clearScreen();
-Meter.show(-1);
+Meter.change(0, 500);
+Meter.wait();
 basic.pause(1000);
-basic.clearScreen();
-Meter.show(100);
+// Meter.show(-1);
+// basic.pause(1000);
+// Meter.show(100);
+// Meter.stop();
 

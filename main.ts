@@ -132,14 +132,15 @@ namespace Meter {
     */
     let litMap: number = 0;
     let newMap: number = 0;
-// declare some back-ground variables...
-    let bgFlashing = false; // notify overflow/underflow
-    let bgCounting = false; // animate intermediate frames
+    let rangeError = false; // notify overflow/underflow
+// declare some background variables...
+    let bgCounting = false; // if true, animate intermediate frames
     let bgTick = 0;         // target animation counting interval
     let bgStart = 0;        // animation start-value
-    let bgFinal = 0;       // animation finish-value
+    let bgFinal = 0;        // animation end-value
+    let bgRangeError = false; // if true, bgFinal was originally out of range
     let bgWhen = 0;         // animation starting time
-    let bgThen = 0;         // animation target finish time
+    let bgThen = 0;         // animation target end time
 
     // toggle the state of all pixels indicated in the 25-bit column-map toToggle
     function toggleColumnMap(toToggle: number) {
@@ -154,14 +155,32 @@ namespace Meter {
         }
     }
 
-    function mapToFrame(value: number, start: number, finish: number, loFrame: number, hiFrame: number) {
-        let result = 0;
-        let span = finish - start; // (can be negative)
-        let frames = hiFrame - loFrame; // (can be negative)
+    function mapToFrame(value: number, start: number, end: number, 
+                        startFrame: number, endFrame: number): number {
+        let result = startFrame;
+        let span = end - start; // (can be negative)
+        let frames = endFrame - startFrame; // (can be negative)
         if (span != 0) {
-            result = loFrame + (hiFrame - loFrame) * (value - start) / Math.abs(span)
+            result = startFrame + frames * (value - start) / span;
         }
         return result;
+    }
+
+    function fixRange(value:number, oneEnd:number, otherEnd: number): number {
+        // NOTE side effect: sets rangeError true if out-of-range
+        let bottom =  Math.min(oneEnd, otherEnd);
+        let top =  Math.max(oneEnd, otherEnd);
+        let result = value;
+        rangeError = false;
+        if (value < bottom){
+            rangeError = true;
+            result = bottom;
+        }
+        if (value > top) {
+            rangeError = true;
+            result = top;
+        }
+        return Math.round(result)
     }
 
     // update display to show new frame
@@ -217,7 +236,7 @@ namespace Meter {
                 break;
         }
         basic.clearScreen();
-        bgFlashing = false;
+        rangeError = false;
         bgCounting = false;
         litMap = 0;
         styleIs = style;
@@ -227,26 +246,18 @@ namespace Meter {
     //% block="show meter value= $value" 
     //% weight=30 
     export function show(value: number) {
-        bgFlashing = false;
+        rangeError = false;
         bgCounting = false;
-        // map value onto display range
-        let frame = Math.round(Math.map(value, fromValue, uptoValue, 0, bound));
-        // range-check
-        if (value < fromValue) {
-            bgFlashing = true; // underflow
-            frame = 0;
-        }
-        if (value > uptoValue) {
-            bgFlashing = true; // overflow
-            frame = bound;
-        }
+        // map value onto displayable range
+        let frame = mapToFrame(value, fromValue, uptoValue, 0, bound);
+        frame = fixRange(frame, 0, bound); // may set rangeError!
         showFrame(frame);
         valueNow = value;
         frameNow = frame;
-        if (bgFlashing) {
+        if (rangeError) {
         // initiate background flashing...
             control.inBackground(function () {
-                while (bgFlashing) {
+                while (rangeError) {
                     showFrame(frameNow); // toggle whole image
                     basic.pause(250);    // flash twice per second
                 }
@@ -258,7 +269,7 @@ namespace Meter {
     //% weight=40 
     export function stop() {
         bgCounting = false;
-        bgFlashing = false;
+        rangeError = false;
         pause(10);
     }
 
@@ -270,19 +281,21 @@ namespace Meter {
         stop();
         bgStart = frameNow; 
         // calc target frame
-        bgFinal == Math.round(myMap(value, fromValue, uptoValue, 0, bound));
+        bgFinal = mapToFrame(value, fromValue, uptoValue, 0, bound);
+        bgFinal = fixRange(bgFinal, 0, bound); // may set rangeError!
+        bgRangeError = rangeError; // if so, remember the fact
         if ((bgFinal != bgStart) && (ms > 50)) { // sanity checks
             bgCounting = true;
             let bgFrame = bgStart;
             bgWhen = input.runningTime();
             bgThen = bgWhen + ms;
-            bgTick = ms / Math.abs(bgStart - bgFinal - 1);
+            bgTick = ms / Math.abs(bgStart - bgFinal);
             // initiate animation 
             control.inBackground(function () {
                 while (bgCounting) {
                     let now = input.runningTime();
                     // where should we have got to by now?
-                    bgFrame = Math.round(myMap(now, bgWhen, bgThen, bgStart, bgFinal))
+                    bgFinal = mapToFrame(now, bgWhen, bgThen, bgStart, bgFinal); // (guaranteed to be in-range)
                     showFrame(bgFrame);
                     if (bgFrame == bgFinal) {
                         bgCounting = false;

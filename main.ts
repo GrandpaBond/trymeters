@@ -125,7 +125,6 @@ namespace Meter {
     let fromValue: number = 0;     // the user's start value
     let uptoValue: number = 0;     // the user's end $value
     let valueNow: number = 0;      // the user's latest value
-    let frameNow: number = -1;     // currently displayed frame (-1 says none)
     /* We save bit-maps of the pixels currently lit, and needing to be lit:
       Computing (litMap XOR newMap) then shows which pixels will need to be toggled.
       Bits are allocated column-wise top-to-bottom and left-to-right,
@@ -134,17 +133,18 @@ namespace Meter {
     */
     let litMap: number = 0;
     let newMap: number = 0;
-    let rangeError = false; // notify overflow/underflow
+    let litFrame: number = -1; // currently displayed frame (-1 says none)
+    let rangeFixed = false;    // notify overflow/underflow
+    let rangeError = false;    // finalFrame was out of range before correction
 // declare some background variables...
-    let bgCounting = false; // if true, animate intermediate frames
-    let bgTick = 0;         // target animation counting interval
-    let bgStart = 0;        // animation start-value
-    let bgFinal = 0;        // animation end-value
-    let bgRangeError = false; // if true, bgFinal was originally out of range
-    let bgWhen = 0;         // animation starting time
-    let bgThen = 0;         // animation target end time
+    let animating = false; // if true, animate intermediate frames
+    let tick = 0;          // target animation counting interval
+    let firstFrame = 0;    // animation start-value
+    let finalFrame = 0;    // animation end-value
+    let when = 0;          // animation starting time
+    let then = 0;          // animation target end time
 
-    // toggle the state of all pixels indicated in the 25-bit column-map toToggle
+    // toggle the state of all pixels indicated in the 25-bit column-map: toToggle
     function toggleColumnMap(toToggle: number) {
         let bitmap = toToggle;
         for (let x = 0; x < 5; x++) { // column-wise from top-left
@@ -160,26 +160,27 @@ namespace Meter {
     function mapToFrame(value: number, start: number, end: number, 
                         startFrame: number, endFrame: number): number {
         let result = startFrame;
-        let span = end - start; // (can be negative)
+        let span = end - start;             // (can be negative)
         let frames = endFrame - startFrame; // (can be negative)
         if (span != 0) {
-            result = startFrame + frames * (value - start) / span;
+            let frac = (value - start) / span;
+            result = startFrame + (frac*frames);
         }
         return result;
     }
 
     function fixRange(value:number, oneEnd:number, otherEnd: number): number {
-        // NOTE side effect: sets rangeError true if out-of-range
+        // NOTE side effect: sets rangeFixed true if out-of-range, else clears it
         let bottom =  Math.min(oneEnd, otherEnd);
         let top =  Math.max(oneEnd, otherEnd);
         let result = value;
-        rangeError = false;
+        rangeFixed = false;
         if (value < bottom){
-            rangeError = true;
+            rangeFixed = true;
             result = bottom;
         }
         if (value > top) {
-            rangeError = true;
+            rangeFixed = true;
             result = top;
         }
         return Math.round(result)
@@ -191,7 +192,7 @@ namespace Meter {
         if (styleIs == STYLES.DIGITAL) {
             let tens = ~~(frame / 10);
             let units = frame % 10;
-            // shift "units" map by 3 columns (=15 bits) over to right side
+            // left-shift "units" map by 3 columns over to right side (=15 bits)
             // then OR-in "tens" map to occupy left 2 columns
             newMap = (mapSet[units] << 15) | mapSet[tens];
         } else {
@@ -200,7 +201,28 @@ namespace Meter {
         let toToggle = newMap ^ litMap;   // see which pixels differ
         toggleColumnMap(toToggle);
         litMap = newMap;
-        frameNow = frame;
+        litFrame = frame;
+    // deal with any rangeError by initiating background flashing
+        if (rangeError) {
+            control.inBackground(function () {
+                while (rangeError) {
+                    basic.pause(200);  // flash about five times a second
+                    if (litMap != 0) {
+                        clearFrame();
+                    } else {
+                        showFrame(frame);
+                    }
+                    toggleColumnMap(litMap);
+                }
+            });
+            toggleColumnMap(litMap); // start flashing immediately
+        }
+    }
+
+    function clearFrame() {
+        basic.clearScreen();
+        litMap = 0;
+        litFrame = -1;
     }
 
     // EXPOSED USER INTERFACES  
@@ -211,7 +233,7 @@ namespace Meter {
         styleIs = style;
         fromValue = start;
         uptoValue = limit;
-        // leave these set as default for unimplemented STYLES
+        // adopt DIAL set as default for any as yet unimplemented STYLES
         mapSet = dialMaps;
         bound = dialBound;
         switch (style) {
@@ -242,83 +264,99 @@ namespace Meter {
                 bound = tidalBound;
                 break;
         }
-        basic.clearScreen();
-        rangeError = false;
-        bgCounting = false;
-        litMap = 0;
+        rangeFixed = false;
+        animating = false;
         styleIs = style;
-        // show(start);
+        clearFrame();
     }
 
-    //% block="show meter value= $value" // eventually add: || animated? $animate, over $ms ms" 
-    //% weight=30 
-    export function show(value: number) {
-        rangeError = false;
-        bgCounting = false;
-        // map value onto displayable range
-        let frame = mapToFrame(value, fromValue, uptoValue, 0, bound);
-        frame = fixRange(frame, 0, bound); // may set rangeError!
-        showFrame(frame);
-        if (rangeError) {
-        // initiate background flashing...
+    //% block="show meter value= $value || , taking $ms ms" 
+    //% inlineInputMode=inline
+    //% expandableArgumentMode="enabled"
+    //% weight=30
+    export function show(value: number, ms = 0) {
+        animating = (ms != 0);
+        firstFrame = litFrame;
+        finalFrame = mapToFrame(value, fromValue, uptoValue, 0, bound);
+        finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
+        rangeError = rangeFixed; // if so, remember the fact
+        if (animating && (ms > 50) && (finalFrame != firstFrame)) { // sanity checks
+            let nextFrame = firstFrame;
+            when = input.runningTime();
+            then = when + ms;
+            tick = ms / Math.abs(firstFrame - finalFrame);
+            // initiate animation 
             control.inBackground(function () {
-                while (rangeError) {
-                    showFrame(frameNow); // toggle whole image
-                    basic.pause(250);    // flash twice per second
+                while (animating) {
+                    let now = input.runningTime();
+                    // can't predict interrupts, so: where should we have got to by now?
+                    nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
+                    nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
+                    showFrame(nextFrame);
+                    if (nextFrame == finalFrame) {
+                        animating = false;
+                    } else {
+                        pause(tick);
+                    }
                 }
             });
+        } else {
+            showFrame(finalFrame); // show final target frame directly
         }
-        valueNow = value;
     }
 
-    //% block="Wait for animation" 
+    //% block="wait for animation" 
     //% weight=50 
     export function wait() {
-        while(bgCounting){
-            pause(10);
+        while(animating){
+            pause(200);
         }
     }
 
-   
-    //% block="Stop animation or error flashing" 
+    //% block="stop animation" 
+    //% weight=40 
+    export function stop() {
+        animating = false;
+        pause(200);
+    }
+
+    //% block="reset meter" 
     //% weight=40 
     export function reset() {
-        bgCounting = false;
-        rangeError = false;
-        pause(10);
+        animating = false;
+        rangeFixed = false;
+        pause(200);
+        show(fromValue);
     }
 
     //% block="change meter to $value over $ms ms" 
     //% weight=35
     export function changeTo(value: number, ms: number) {
-        bgStart = frameNow; 
+        firstFrame = litFrame; 
         // calc target frame
-        bgFinal = mapToFrame(value, fromValue, uptoValue, 0, bound);
-        bgFinal = fixRange(bgFinal, 0, bound); // may set rangeError!
-        bgRangeError = rangeError; // if so, remember the fact
-        if ((bgFinal != bgStart) && (ms > 50)) { // sanity checks
-            bgCounting = true;
-            let bgFrame = bgStart;
-            bgWhen = input.runningTime();
-            bgThen = bgWhen + ms;
-            bgTick = ms / Math.abs(bgStart - bgFinal);
+        finalFrame = mapToFrame(value, fromValue, uptoValue, 0, bound);
+        finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
+        if (animating && (ms > 50) && (finalFrame != firstFrame)) { // sanity checks
+            let nextFrame = firstFrame;
+            when = input.runningTime();
+            then = when + ms;
+            tick = ms / Math.abs(firstFrame - finalFrame);
             // initiate animation 
             control.inBackground(function () {
-                while (bgCounting) {
+                if (nextFrame == finalFrame) {
+                    animating = false;  // stop animating just before final reading
+                }
+                while (animating) {
                     let now = input.runningTime();
                     // can't predict interrupts, so where should we have got to by now?
-                    bgFrame = mapToFrame(now, bgWhen, bgThen, bgStart, bgFinal);
-                    bgFrame = fixRange(bgFrame, 0, bound); // won'tab set rangeError!
-                    showFrame(bgFrame);
-                    if (bgFrame == bgFinal) {
-                        bgCounting = false;
-                    }
-                    pause(bgTick);
+                    nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
+                    nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
+                    showFrame(nextFrame);
+                    pause(tick);
                 }
             });
-        } else {
-            showFrame(bgFinal); // jump straight there
         }
+        showFrame(finalFrame); // now show final reading 
     }
 }
 /****
@@ -383,12 +421,13 @@ Meter.wait();
 basic.pause(1000);
 Meter.changeTo(100, 500);
 Meter.wait();
-basic.pause(1000);
-Meter.changeTo(0, 500);
+basic.pause(2000);
+Meter.changeTo(-1, 500);
 Meter.wait();
-basic.pause(1000);
-// Meter.show(-1);
-// basic.pause(1000);
-// Meter.show(100);
-// Meter.stop();
+basic.pause(2000);
+Meter.show(-1);
+basic.pause(2000);
+Meter.show(101);
+basic.pause(3000);
+Meter.reset();
 

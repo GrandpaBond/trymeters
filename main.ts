@@ -131,16 +131,16 @@ namespace Meter {
     let newMap: number = 0;
     let litFrame: number = -1; // currently displayed frame (-1 says none)
     let rangeFixed = false;    // notify overflow/underflow
-    let rangeError = false;    // finalFrame was out of range before correction
+    let flashError = false;    // finalFrame was out of range before correction
 
 // declare some background variables...
-    let animating = false; // true while animating intermediate frames
+    let adjusting = false; // true while adjusting intermediate frames
     let flashing = false;  // true while indicating frameError
     let firstFrame = 0;    // animation start-value
     let finalFrame = 0;    // animation end-value
     let when = 0;          // animation starting time
     let then = 0;          // animation target end time
-    let tick = 0;          // animation counting interval
+    let tick = 0;          // animation adjusting interval
     let flashGap = 125;    // flashing around 4 times/sec
 
     function mapToFrame(value: number, start: number, end: number, 
@@ -173,7 +173,7 @@ namespace Meter {
     }
 
     // update display to show new frame
-    // (frame will always be in the range [0..bound])
+    // (frame will always be within the range [0..bound])
     function showFrame(frame: number) {
         if (styleIs == digitStyle) {
             let tens = ~~(frame / 10);
@@ -184,15 +184,11 @@ namespace Meter {
         } else {
             newMap = mapSet[frame];
         }
-        let toToggle = newMap ^ litMap;   // see which pixels differ
+    // see which pixels differ
+        let toToggle = newMap ^ litMap;
         toggleColumnMap(toToggle);
         litMap = newMap;
         litFrame = frame;
-    // deal with any rangeError by initiating background flashing
-        if (rangeError) {
-            control.inBackground(() => { flashFrame() });
-            toggleColumnMap(litMap); // start flashing immediately
-        }
     }
 
     function clearFrame() {
@@ -201,14 +197,12 @@ namespace Meter {
         litFrame = -1;
     }
 
-    function flashFrame():void {
-        while (flashing) {
-            basic.pause(flashGap);
-            if (litMap != 0) {
-                clearFrame();
-            } else {
-                showFrame(finalFrame);
-            }
+    function flash():void {
+        basic.pause(flashGap);
+        if (litMap != 0) {
+            clearFrame();
+        } else {
+            showFrame(finalFrame);
         }
     }
 
@@ -261,10 +255,11 @@ namespace Meter {
                 break;
         }
         rangeFixed = false;
-        rangeError = false;
-        animating = false;
+        flashError = false;
+        adjusting = false;
         styleIs = style;
         clearFrame();
+        showFrame(0);
     }
 
     //% block="Use digital meter to indicate values from 0 to 99" 
@@ -276,12 +271,14 @@ namespace Meter {
         mapSet = digitMaps; // NOTE: the 10 numeric frames!
         bound = digitBound; // ...combine to allow 100 values
         rangeFixed = false;
-        animating = false;
+        adjusting = false;
         clearFrame();
+        showFrame(0);
     }
 
+// perform background tasks: adjusting the meter gradually and/or flashing range-error
     function animate(): void {
-        while (animating) {
+        while (adjusting) {
             let nextFrame = firstFrame;
             let now = input.runningTime();
             // can't predict interrupts, so: where should we have got to by now?
@@ -289,13 +286,15 @@ namespace Meter {
             nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
             showFrame(nextFrame);
             if (nextFrame == finalFrame) {
-                animating = false;
+                adjusting = false;
             } else {
                 pause(tick);
             }
         }
-
-
+        // now any adjusting is complete, start flashing range-error if needed
+        while (flashError) {
+             flash();
+        }
     }
 
     //% block="show meter value= $value || , taking $ms ms" 
@@ -303,26 +302,27 @@ namespace Meter {
     //% expandableArgumentMode="enabled"
     //% weight=30
     export function show(value: number, ms = 0) {
-        animating = (ms != 0);
-        firstFrame = litFrame;
+        adjusting = (ms != 0);
         finalFrame = mapToFrame(value, fromValue, uptoValue, 0, bound);
         finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
-        rangeError = rangeFixed; // if so, remember the fact
-        if (animating && (ms > 50) && (finalFrame != firstFrame)) { // sanity checks
+        flashError = rangeFixed; // if so, remember the fact
+        firstFrame = litFrame;
+        if (adjusting && (ms > 50) && (finalFrame != firstFrame)) { // sanity checks
             when = input.runningTime();
             then = when + ms;
             tick = ms / Math.abs(firstFrame - finalFrame);
-            // initiate animation 
-            control.inBackground(function () { animate() });
         } else {
-            showFrame(finalFrame); // show final target frame directly
+            adjusting = false;     // adjustment infeasible
+            showFrame(finalFrame); // just show final target frame directly
         }
+        // perform any required progressive adjustment or error-flashing as a background task
+        control.inBackground(function () { animate() })
     }
 
     //% block="wait for animation" 
     //% weight=50 
     export function wait() {
-        while(animating){
+        while(adjusting){
             pause(200);
         }
     }
@@ -330,20 +330,21 @@ namespace Meter {
     //% block="stop animation" 
     //% weight=40 
     export function stop() {
-        animating = false;
+        adjusting = false;
         pause(200);
     }
 
     //% block="reset meter" 
     //% weight=40 
     export function reset() {
-        animating = false;
-        rangeFixed = false;
+        adjusting = false; //  prematurely stop background adjustment
+        flashError = false; // alternatively, stop error-flashing
         pause(200);
-        show(fromValue);
+        showFrame(0);
     }
 }
 Meter.use(STYLES.BLOB, 0, 99);
+basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
     basic.pause(100);
@@ -351,20 +352,23 @@ for (let i = 0; i < 100; i++) {
 basic.pause(1000);
 
 Meter.use(STYLES.SPIRAL, 0, 99);
+basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
-    basic.pause(100);
+    basic.pause(50);
 }
 basic.pause(1000);
 
 Meter.use(STYLES.BAR, 0, 99);
+basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
-    basic.pause(100);
+    basic.pause(70);
 }
 basic.pause(1000); 
 
 Meter.use(STYLES.DIAL, 0, 99);
+basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
     basic.pause(100);
@@ -372,6 +376,7 @@ for (let i = 0; i < 100; i++) {
 basic.pause(1000); 
 
 Meter.use(STYLES.NEEDLE, 0, 99);
+basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
     basic.pause(100);
@@ -379,13 +384,15 @@ for (let i = 0; i < 100; i++) {
 basic.pause(1000); 
 
 Meter.use(STYLES.TIDAL, 0, 99);
+basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
-    basic.pause(200);
+    basic.pause(50);
 }
 basic.pause(1000);
 
 Meter.digital();
+basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
     basic.pause(200);
@@ -405,7 +412,8 @@ Meter.wait();
 basic.pause(1000);
 Meter.show(100, 500);
 Meter.wait();
-basic.pause(2000);
+
+basic.pause(4000);
 Meter.show(-1, 500);
 Meter.wait();
 basic.pause(2000);

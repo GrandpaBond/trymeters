@@ -204,18 +204,18 @@ namespace Meter {
         litFrame = frame;
     // deal with any rangeError by initiating background flashing
         if (rangeError) {
-            control.inBackground(function () {
-                while (rangeError) {
-                    basic.pause(200);  // flash about five times a second
-                    if (litMap != 0) {
-                        clearFrame();
-                    } else {
-                        showFrame(frame);
-                    }
-                    toggleColumnMap(litMap);
-                }
-            });
+            control.inBackground(() => { flashFrame() });
             toggleColumnMap(litMap); // start flashing immediately
+        }
+    }
+    function flashFrame():void {
+        while (rangeError) {
+            basic.pause(200);  // flash about five times a second
+            if (litMap != 0) {
+                clearFrame();
+            } else {
+                showFrame(finalFrame);
+            }
         }
     }
 
@@ -270,6 +270,24 @@ namespace Meter {
         clearFrame();
     }
 
+    function animate(): void {
+        while (animating) {
+            let nextFrame = firstFrame;
+            let now = input.runningTime();
+            // can't predict interrupts, so: where should we have got to by now?
+            nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
+            nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
+            showFrame(nextFrame);
+            if (nextFrame == finalFrame) {
+                animating = false;
+            } else {
+                pause(tick);
+            }
+        }
+
+
+    }
+
     //% block="show meter value= $value || , taking $ms ms" 
     //% inlineInputMode=inline
     //% expandableArgumentMode="enabled"
@@ -281,25 +299,11 @@ namespace Meter {
         finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
         rangeError = rangeFixed; // if so, remember the fact
         if (animating && (ms > 50) && (finalFrame != firstFrame)) { // sanity checks
-            let nextFrame = firstFrame;
             when = input.runningTime();
             then = when + ms;
             tick = ms / Math.abs(firstFrame - finalFrame);
             // initiate animation 
-            control.inBackground(function () {
-                while (animating) {
-                    let now = input.runningTime();
-                    // can't predict interrupts, so: where should we have got to by now?
-                    nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
-                    nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
-                    showFrame(nextFrame);
-                    if (nextFrame == finalFrame) {
-                        animating = false;
-                    } else {
-                        pause(tick);
-                    }
-                }
-            });
+            control.inBackground(function () { animate() });
         } else {
             showFrame(finalFrame); // show final target frame directly
         }
@@ -327,36 +331,6 @@ namespace Meter {
         rangeFixed = false;
         pause(200);
         show(fromValue);
-    }
-
-    //% block="change meter to $value over $ms ms" 
-    //% weight=35
-    export function changeTo(value: number, ms: number) {
-        firstFrame = litFrame; 
-        // calc target frame
-        finalFrame = mapToFrame(value, fromValue, uptoValue, 0, bound);
-        finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
-        if (animating && (ms > 50) && (finalFrame != firstFrame)) { // sanity checks
-            let nextFrame = firstFrame;
-            when = input.runningTime();
-            then = when + ms;
-            tick = ms / Math.abs(firstFrame - finalFrame);
-            // initiate animation 
-            control.inBackground(function () {
-                if (nextFrame == finalFrame) {
-                    animating = false;  // stop animating just before final reading
-                }
-                while (animating) {
-                    let now = input.runningTime();
-                    // can't predict interrupts, so where should we have got to by now?
-                    nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
-                    nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
-                    showFrame(nextFrame);
-                    pause(tick);
-                }
-            });
-        }
-        showFrame(finalFrame); // now show final reading 
     }
 }
 /****
@@ -413,16 +387,16 @@ basic.pause(1000);
 Meter.use(STYLES.DIAL, 0, 99);
 basic.pause(1000);
 basic.clearScreen();
-Meter.changeTo(75, 500);
+Meter.show(75, 500);
 Meter.wait();
 basic.pause(1000);
-Meter.changeTo(50, 500);
+Meter.show(50, 500);
 Meter.wait();
 basic.pause(1000);
-Meter.changeTo(100, 500);
+Meter.show(100, 500);
 Meter.wait();
 basic.pause(2000);
-Meter.changeTo(-1, 500);
+Meter.show(-1, 500);
 Meter.wait();
 basic.pause(2000);
 Meter.show(-1);

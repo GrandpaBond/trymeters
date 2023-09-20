@@ -191,6 +191,19 @@ namespace Meter {
         litFrame = frame;
     }
 
+    // toggle the state of all pixels indicated in the 25-bit column-map: toToggle
+    function toggleColumnMap(toToggle: number) {
+        let bitmap = toToggle;
+        for (let x = 0; x < 5; x++) { // column-wise from top-left
+            for (let y = 0; y < 5; y++) {
+                if (bitmap & 1) {
+                    led.toggle(x, y);
+                }
+                bitmap >>= 1;
+            }
+        }
+    }
+
     function clearFrame() {
         basic.clearScreen();
         litMap = 0;
@@ -206,22 +219,51 @@ namespace Meter {
         }
     }
 
-
-    // toggle the state of all pixels indicated in the 25-bit column-map: toToggle
-    function toggleColumnMap(toToggle: number) {
-        let bitmap = toToggle;
-        for (let x = 0; x < 5; x++) { // column-wise from top-left
-            for (let y = 0; y < 5; y++) {
-                if (bitmap & 1) {
-                    led.toggle(x, y);
-                }
-                bitmap >>= 1;
+   // perform background tasks: adjusting the meter gradually and/or flashing range-error
+    function animate(): void {
+        while (adjusting) {
+            let now = input.runningTime();
+            // can't predict interrupts, so: where should we have got to by now?
+            let nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
+            nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
+            showFrame(nextFrame);
+            if (nextFrame == finalFrame) {  // we've arrived!
+                adjusting = false;
+            } else {
+                pause(tick);
             }
+        }
+        // now any adjusting is complete, start flashing range-error if needed
+        while (flashError) {
+             flash();
         }
     }
 
-    // EXPOSED USER INTERFACES  
+    // EXPORTED USER INTERFACES  
 
+    //% block="wait for animation" 
+    //% weight=50 
+    export function wait() {
+        while(adjusting){
+            pause(20);
+        }
+    }
+
+    //% block="stop animation" 
+    //% weight=40 
+    export function stop() {
+        adjusting = false; //  prematurely stop background adjustment
+        flashError = false; // stop any error-flashing
+        pause(20);      // ...let it happen...
+    }
+
+    //% block="reset meter" 
+    //% weight=40 
+    export function reset() {
+        stop();
+        clearFrame();
+        showFrame(0);
+    }
     //% block="Use %choice Meter to show values from $start to $limit" 
     //% weight=20 
     export function use(style: STYLES, start: number, limit: number) {
@@ -254,12 +296,8 @@ namespace Meter {
                 bound = tidalBound;
                 break;
         }
-        rangeFixed = false;
-        flashError = false;
-        adjusting = false;
         styleIs = style;
-        clearFrame();
-        showFrame(0);
+        reset();
     }
 
     //% block="Use digital meter to indicate values from 0 to 99" 
@@ -270,44 +308,26 @@ namespace Meter {
         uptoValue = 99; 
         mapSet = digitMaps; // NOTE: the 10 numeric frames!
         bound = digitBound; // ...combine to allow 100 values
-        rangeFixed = false;
-        adjusting = false;
-        clearFrame();
-        showFrame(0);
+        reset();
     }
 
-// perform background tasks: adjusting the meter gradually and/or flashing range-error
-    function animate(): void {
-        while (adjusting) {
-            let nextFrame = firstFrame;
-            let now = input.runningTime();
-            // can't predict interrupts, so: where should we have got to by now?
-            nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
-            nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
-            showFrame(nextFrame);
-            if (nextFrame == finalFrame) {
-                adjusting = false;
-            } else {
-                pause(tick);
-            }
-        }
-        // now any adjusting is complete, start flashing range-error if needed
-        while (flashError) {
-             flash();
-        }
-    }
-
+    /** 
+     *  Show new value for meter immediately, or adjusting gradually
+    */
     //% block="show meter value= $value || , taking $ms ms" 
     //% inlineInputMode=inline
     //% expandableArgumentMode="enabled"
     //% weight=30
     export function show(value: number, ms = 0) {
-        adjusting = (ms != 0);
         finalFrame = mapToFrame(value, fromValue, uptoValue, 0, bound);
         finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
         flashError = rangeFixed; // if so, remember the fact
-        firstFrame = litFrame;
-        if (adjusting && (ms > 50) && (finalFrame != firstFrame)) { // sanity checks
+        firstFrame = litFrame; // (inherited start-frame, may be -1 if none)
+        if (   (ms > 50)       // enough time to adjust?
+            && (litFrame != -1) // there is a current reading?
+            && (finalFrame != firstFrame) ) { // ...that differs?
+        // passes all sanity checks
+            adjusting = true;     // adjustment feasible
             when = input.runningTime();
             then = when + ms;
             tick = ms / Math.abs(firstFrame - finalFrame);
@@ -319,30 +339,10 @@ namespace Meter {
         control.inBackground(function () { animate() })
     }
 
-    //% block="wait for animation" 
-    //% weight=50 
-    export function wait() {
-        while(adjusting){
-            pause(200);
-        }
-    }
-
-    //% block="stop animation" 
-    //% weight=40 
-    export function stop() {
-        adjusting = false;
-        pause(200);
-    }
-
-    //% block="reset meter" 
-    //% weight=40 
-    export function reset() {
-        adjusting = false; //  prematurely stop background adjustment
-        flashError = false; // alternatively, stop error-flashing
-        pause(200);
-        showFrame(0);
-    }
 }
+
+// tests
+/***
 Meter.use(STYLES.BLOB, 0, 99);
 basic.pause(1000);
 for (let i = 0; i < 100; i++) {
@@ -399,9 +399,9 @@ for (let i = 0; i < 100; i++) {
 }
 basic.pause(1000);
 
-/*******/
+****/
 
-Meter.use(STYLES.DIAL, 0, 99);
+Meter.use(STYLES.BAR, 0, 99);
 basic.pause(1000);
 basic.clearScreen();
 Meter.show(75, 500);

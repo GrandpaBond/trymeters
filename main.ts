@@ -253,9 +253,14 @@ namespace Meter {
     //% block="stop animation" 
     //% weight=40 
     export function stop() {
-        adjusting = false; //  prematurely stop background adjustment
-        flashError = false; // stop any error-flashing
-        pause(20);      // ...let it happen...
+        if (adjusting) {
+            adjusting = false; //  prematurely stop background adjustment
+            basic.pause(tick); // ensure it has happened
+        }
+        if (flashError){
+            flashError = false; // stop any error-flashing
+            basic.pause(flashGap); // ensure it has happened
+        }
     }
 
     //% block="reset meter" 

@@ -225,7 +225,8 @@ namespace Meter {
             let now = input.runningTime();
             // can't predict interrupts, so: where should we have got to by now?
             let nextFrame = mapToFrame(now, when, then, firstFrame, finalFrame);
-            nextFrame = fixRange(nextFrame, 0, bound); // won't ever set rangeFixed!
+            // NOTE: will exceed finalFrame if we're late to complete
+            nextFrame = fixRange(nextFrame, 0, bound); // could set rangeFixed
             showFrame(nextFrame);
             if (nextFrame == finalFrame) {  // we've arrived!
                 adjusting = false;
@@ -319,21 +320,22 @@ namespace Meter {
     //% expandableArgumentMode="enabled"
     //% weight=30
     export function show(value: number, ms = 0) {
+        stop(); // cease any ongoing animation (leaves any current litFrame lit)
         finalFrame = mapToFrame(value, fromValue, uptoValue, 0, bound);
         finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
         flashError = rangeFixed; // if so, remember the fact
-        firstFrame = litFrame; // (inherited start-frame, may be -1 if none)
-        if (   (ms > 50)       // enough time to adjust?
-            && (litFrame != -1) // there is a current reading?
+        firstFrame = litFrame; // the inherited start-frame (may be -1 if none)
+        if (   (ms > 50)       // enough time to adjust gradually?
+            && (litFrame != -1) // and there is a current reading?
             && (finalFrame != firstFrame) ) { // ...that differs?
         // passes all sanity checks
-            adjusting = true;     // adjustment feasible
+            adjusting = true;     // adjustment is feasible
             when = input.runningTime();
             then = when + ms;
-            tick = ms / Math.abs(firstFrame - finalFrame);
+            tick = Math.round(ms / Math.abs(firstFrame - finalFrame));
         } else {
-            adjusting = false;     // adjustment infeasible
-            showFrame(finalFrame); // just show final target frame directly
+            adjusting = false;     // adjustment is infeasible...
+            showFrame(finalFrame); // so just show final target frame directly
         }
         // perform any required progressive adjustment or error-flashing as a background task
         control.inBackground(function () { animate() })
@@ -403,23 +405,27 @@ basic.pause(1000);
 
 Meter.use(STYLES.BAR, 0, 99);
 basic.pause(1000);
-basic.clearScreen();
 Meter.show(75, 500);
 Meter.wait();
 basic.pause(1000);
+
 Meter.show(50, 500);
 Meter.wait();
 basic.pause(1000);
+
 Meter.show(100, 500);
 Meter.wait();
-
 basic.pause(4000);
+
 Meter.show(-1, 500);
 Meter.wait();
 basic.pause(2000);
+
 Meter.show(-1);
 basic.pause(2000);
+
 Meter.show(101);
 basic.pause(3000);
+
 Meter.reset();
 

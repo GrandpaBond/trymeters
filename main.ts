@@ -63,11 +63,11 @@ const barBound = 14;
 
 // SPIRAL: 25 frames winding outwards from middle
 const spiralMaps = [
-    0x0001000, 0x0021000, 0x0061000, 0x0063000, 0x0063100, 0x00631C0, 
+    0x0001000, 0x0021000, 0x0061000, 0x0063000, 0x0063100, 0x0063180, 
     0x00631C0, 0x00639C0, 0x00739C0, 0x02739C0, 0x06739C0, 0x0E739C0, 
-    0x1E739C0, 0x1EF79C0, 0x1EF7BC0, 0x1EF7BD0, 0x1EF7BD8, 0x1EF7BDC, 
+    0x1E739C0, 0x1EF39C0, 0x1EF79C0, 0x1EF7BC0, 0x1EF7BD0, 0x1EF7BD8, 
     0x1EF7BDC, 0x1EF7BDE, 0x1EF7BDF, 0x1EF7BFF, 0x1EF7FFF, 0x1EFFFFF, 0x1FFFFFF];
-const spiralBound = 25;
+const spiralBound = 24;
 
 // TIDAL: 25 frames washing diagonally up from bottom-left corner
 const tidalMaps = [
@@ -76,7 +76,7 @@ const tidalMaps = [
     0x00873DF, 0x00C73DF, 0x10C73DF, 0x18C73DF, 0x18E73DF, 0x18E7BDF,  
     0x18E7BFF, 0x18E7FFF, 0x18F7FFF, 0x1CF7FFF, 0x1EF7FFF, 0x1EFFFFF,
     0x1FFFFFF];
-const tidalBound = 25;
+const tidalBound = 24;
 
 // NEEDLE: 17 frames swinging clockwise around top-left corner
 const needleMaps = [
@@ -132,6 +132,7 @@ namespace Meter {
     let litFrame: number = -1; // currently displayed frame (-1 says none)
     let rangeFixed = false;    // notify overflow/underflow
     let flashError = false;    // finalFrame was out of range before correction
+    let flashUnlit = false;    // distinguish lit/unlit phase of flashing
 
 // declare some background variables...
     let adjusting = false; // true while adjusting intermediate frames
@@ -207,15 +208,17 @@ namespace Meter {
     function clearFrame() {
         basic.clearScreen();
         litMap = 0;
-        litFrame = -1;
+        // litFrame = -1;
     }
 
     function flash():void {
         basic.pause(flashGap);
         if (litMap != 0) {
             clearFrame();
+            flashUnlit = true; // forces re-display when flashing interrupted
         } else {
             showFrame(finalFrame);
+            flashUnlit = false;
         }
     }
 
@@ -234,9 +237,14 @@ namespace Meter {
                 pause(tick);
             }
         }
+        // if animations got halted prematurely, litFrame shows where we got to
+        // which will always be within bounds, so forget about flashing
+        if (litFrame != finalFrame) {
+            flashError = false;
+        }
         // now any adjusting is complete, start flashing range-error if needed
-        while (flashError) {
-             flash();
+        while (flashError || flashUnlit) {
+             flash(); // always leave finalFrame lit
         }
     }
 
@@ -259,7 +267,7 @@ namespace Meter {
         }
         if (flashError){
             flashError = false; // stop any error-flashing
-            basic.pause(flashGap); // ensure it has happened
+            basic.pause(2*flashGap); // ensure it has happened
         }
     }
 
@@ -348,21 +356,22 @@ namespace Meter {
 
 }
 
+
 // tests
 /***
+
+Meter.use(STYLES.SPIRAL, 0, 24);
+Meter.show(25, 12000);
+pause(6000);
+Meter.show(24, 12000);
+basic.pause(1000);
+
+
 Meter.use(STYLES.BLOB, 0, 99);
 basic.pause(1000);
 for (let i = 0; i < 100; i++) {
     Meter.show(i);
     basic.pause(100);
-}
-basic.pause(1000);
-
-Meter.use(STYLES.SPIRAL, 0, 99);
-basic.pause(1000);
-for (let i = 0; i < 100; i++) {
-    Meter.show(i);
-    basic.pause(50);
 }
 basic.pause(1000);
 
@@ -407,7 +416,7 @@ for (let i = 0; i < 100; i++) {
 basic.pause(1000);
 
 ****/
-
+/*
 Meter.use(STYLES.BAR, 0, 99);
 basic.pause(1000);
 Meter.show(75, 500);
@@ -433,4 +442,18 @@ Meter.show(101);
 basic.pause(3000);
 
 Meter.reset();
+*/
 
+// map dial to accelerometer
+Meter.use(STYLES.DIAL, 0, 360);
+let gx = 0;
+let gy = 0;
+let angle = 0;
+basic.forever(function() {
+    gx = input.acceleration(Dimension.X);
+    gy = input.acceleration(Dimension.Y);
+    angle = (Math.round(Math.atan2(gx, gy)*180/Math.PI)+360) % 360;
+    //basic.showNumber(angle);
+    Meter.show(360-angle, 300);
+    basic.pause(500);
+})

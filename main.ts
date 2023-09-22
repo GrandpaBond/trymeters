@@ -63,17 +63,17 @@ const barBound = 14;
 
 // SPIRAL: 25 frames winding outwards from middle
 const spiralMaps = [
-    0x0001000, 0x0021000, 0x0061000, 0x0063000, 0x0063100, 0x0063180, 
-    0x00631C0, 0x00639C0, 0x00739C0, 0x02739C0, 0x06739C0, 0x0E739C0, 
-    0x1E739C0, 0x1EF39C0, 0x1EF79C0, 0x1EF7BC0, 0x1EF7BD0, 0x1EF7BD8, 
+    0x0001000, 0x0021000, 0x0061000, 0x0063000, 0x0063100, 0x0063180,
+    0x00631C0, 0x00639C0, 0x00739C0, 0x02739C0, 0x06739C0, 0x0E739C0,
+    0x1E739C0, 0x1EF39C0, 0x1EF79C0, 0x1EF7BC0, 0x1EF7BD0, 0x1EF7BD8,
     0x1EF7BDC, 0x1EF7BDE, 0x1EF7BDF, 0x1EF7BFF, 0x1EF7FFF, 0x1EFFFFF, 0x1FFFFFF];
 const spiralBound = 24;
 
 // TIDAL: 25 frames washing diagonally up from bottom-left corner
 const tidalMaps = [
-    0x0000010, 0x0000210, 0x0000218, 0x000021C, 0x000031C, 0x000431C, 
-    0x008431C, 0x008631C, 0x008639C, 0x008639E, 0x008639F, 0x00863DF, 
-    0x00873DF, 0x00C73DF, 0x10C73DF, 0x18C73DF, 0x18E73DF, 0x18E7BDF,  
+    0x0000010, 0x0000210, 0x0000218, 0x000021C, 0x000031C, 0x000431C,
+    0x008431C, 0x008631C, 0x008639C, 0x008639E, 0x008639F, 0x00863DF,
+    0x00873DF, 0x00C73DF, 0x10C73DF, 0x18C73DF, 0x18E73DF, 0x18E7BDF,
     0x18E7BFF, 0x18E7FFF, 0x18F7FFF, 0x1CF7FFF, 0x1EF7FFF, 0x1EFFFFF,
     0x1FFFFFF];
 const tidalBound = 24;
@@ -142,25 +142,25 @@ namespace Meter {
     let tick = 0;          // animation adjusting interval
     let flashGap = 125;    // flashing around 4 times/sec
 
-    function mapToFrame(value: number, start: number, end: number, 
-                        startFrame: number, endFrame: number): number {
+    function mapToFrame(value: number, start: number, end: number,
+        startFrame: number, endFrame: number): number {
         let result = startFrame;
         let span = end - start;             // (can be negative)
         let frames = endFrame - startFrame; // (can be negative)
         if (span != 0) {
             let frac = (value - start) / span;
-            result = startFrame + (frac*frames);
+            result = startFrame + (frac * frames);
         }
         return result;
     }
 
-    function fixRange(value:number, oneEnd:number, otherEnd: number): number {
+    function fixRange(value: number, oneEnd: number, otherEnd: number): number {
         // NOTE side effect: sets rangeFixed true if out-of-range, else clears it
-        let bottom =  Math.min(oneEnd, otherEnd);
-        let top =  Math.max(oneEnd, otherEnd);
+        let bottom = Math.min(oneEnd, otherEnd);
+        let top = Math.max(oneEnd, otherEnd);
         let result = value;
         rangeFixed = false;
-        if (value < bottom){
+        if (value < bottom) {
             rangeFixed = true;
             result = bottom;
         }
@@ -183,7 +183,7 @@ namespace Meter {
         } else {
             newMap = mapSet[frame];
         }
-    // see which pixels differ
+        // see which pixels differ
         let toToggle = newMap ^ litMap;
         toggleColumnMap(toToggle);
         litMap = newMap;
@@ -209,7 +209,7 @@ namespace Meter {
         // litFrame = -1;
     }
 
-    function flash():void {
+    function flash(): void {
         basic.pause(flashGap);
         if (litMap != 0) {
             clearFrame();
@@ -220,7 +220,7 @@ namespace Meter {
         }
     }
 
-   // perform background tasks: adjusting the meter gradually and/or flashing range-error
+    // perform background tasks: adjusting the meter gradually and/or flashing range-error
     function animate(): void {
         while (adjusting) {
             let now = input.runningTime();
@@ -242,42 +242,27 @@ namespace Meter {
         }
         // now any adjusting is complete, start flashing range-error if needed
         while (flashError || flashUnlit) {
-             flash(); // always leave finalFrame lit
+            flash(); // always leave finalFrame lit
         }
     }
 
     // EXPORTED USER INTERFACES  
 
-    //% block="wait for animation" 
-    //% weight=50 
-    export function wait() {
-        while(adjusting){
-            pause(20);
-        }
+    //% block="Use digital meter to indicate values from 0 to 99" 
+    //% weight=100 
+    export function digital() {
+        styleIs = digitStyle;
+        fromValue = 0;
+        uptoValue = 99;
+        mapSet = digitMaps; // NOTE: the 10 numeric frames!
+        bound = digitBound; // ...combine to allow 100 values
+        reset();
     }
 
-    //% block="stop animation" 
-    //% weight=40 
-    export function stop() {
-        if (adjusting) {
-            adjusting = false; //  prematurely stop background adjustment
-            basic.pause(tick); // ensure it has happened
-        }
-        if (flashError){
-            flashError = false; // stop any error-flashing
-            basic.pause(2*flashGap); // ensure it has happened
-        }
-    }
-
-    //% block="reset meter" 
-    //% weight=40 
-    export function reset() {
-        stop();
-        clearFrame();
-        showFrame(0);
-    }
     //% block="Use %choice Meter to show values from $start to $limit" 
-    //% weight=20 
+    //% start.defl=0
+    //% limit.defl=20
+    //% weight=90
     export function use(style: STYLES, start: number, limit: number) {
         styleIs = style;
         fromValue = start;
@@ -312,34 +297,23 @@ namespace Meter {
         reset();
     }
 
-    //% block="Use digital meter to indicate values from 0 to 99" 
-    //% weight=20 
-    export function digital() {
-        styleIs = digitStyle;
-        fromValue = 0;
-        uptoValue = 99; 
-        mapSet = digitMaps; // NOTE: the 10 numeric frames!
-        bound = digitBound; // ...combine to allow 100 values
-        reset();
-    }
-
     /** 
      *  Show new value for meter immediately, or adjusting gradually
     */
     //% block="show meter value= $value || , taking $ms ms" 
     //% inlineInputMode=inline
     //% expandableArgumentMode="enabled"
-    //% weight=30
+    //% weight=80
     export function show(value: number, ms = 0) {
         stop(); // cease any ongoing animation (leaves any current litFrame lit)
         finalFrame = mapToFrame(value, fromValue, uptoValue, 0, bound);
         finalFrame = fixRange(finalFrame, 0, bound); // NOTE: may set rangeFixed!
         flashError = rangeFixed; // if so, remember the fact
         firstFrame = litFrame; // the inherited start-frame (may be -1 if none)
-        if (   (ms > 50)       // enough time to adjust gradually?
+        if ((ms > 50)       // enough time to adjust gradually?
             && (litFrame != -1) // and there is a current reading?
-            && (finalFrame != firstFrame) ) { // ...that differs?
-        // passes all sanity checks
+            && (finalFrame != firstFrame)) { // ...that differs?
+            // passes all sanity checks
             adjusting = true;     // adjustment is feasible
             when = input.runningTime();
             then = when + ms;
@@ -351,128 +325,159 @@ namespace Meter {
         // perform any required progressive adjustment or error-flashing as a background task
         control.inBackground(function () { animate() })
     }
+
+    //% block="reset meter" 
+    //% weight=30 
+    export function reset() {
+        stop();
+        clearFrame();
+        showFrame(0);
+    }
+
+    //% block="wait for animation" 
+    //% weight=20 
+    export function wait() {
+        while (adjusting) {
+            pause(20);
+        }
+    }
+
+    //% block="stop animation" 
+    //% weight=10 
+    export function stop() {
+        if (adjusting) {
+            adjusting = false; //  prematurely stop background adjustment
+            basic.pause(tick); // ensure it has happened
+        }
+        if (flashError) {
+            flashError = false; // stop any error-flashing
+            basic.pause(2 * flashGap); // ensure it has happened
+        }
+    }
+
+
 }
 
 
 // T E S T S
 function doTest(which: number) {
     switch (which) {
-    case 0:
-        Meter.digital();
-        basic.pause(1000);
-        for (let i = 0; i < 100; i++) {
-            Meter.show(i);
-            basic.pause(200);
-        }
-        break;
+        case 0:
+            Meter.digital();
+            basic.pause(1000);
+            for (let i = 0; i < 100; i++) {
+                Meter.show(i);
+                basic.pause(200);
+            }
+            break;
 
-    case 1:  // fractional, adjusting over 9 seconds
-        Meter.use(STYLES.SPIRAL, 0, 1.0);
-        Meter.show(1.0, 9000);
-        Meter.wait();
-        Meter.show(0, 500);
-        break;
+        case 1:  // fractional, adjusting over 9 seconds
+            Meter.use(STYLES.SPIRAL, 0, 1.0);
+            Meter.show(1.0, 9000);
+            Meter.wait();
+            Meter.show(0, 500);
+            break;
 
-    case 2:  // reversed
-        Meter.use(STYLES.BLOB, 50, 0);
-        basic.pause(1000);
-        for (let i = 0; i < 100; i++) {
-            Meter.show(i);
-            basic.pause(100);
-        }
-        Meter.show(0, 500);
-        break;
+        case 2:  // reversed
+            Meter.use(STYLES.BLOB, 50, 0);
+            basic.pause(1000);
+            for (let i = 0; i < 100; i++) {
+                Meter.show(i);
+                basic.pause(100);
+            }
+            Meter.show(0, 500);
+            break;
 
-    case 3: // negative values
-        Meter.use(STYLES.BAR, 0, -99);
-        basic.pause(1000);
-        for (let i = 0; i < 100; i++) {
-            Meter.show(-i);
-            basic.pause(70);
-        }
-        Meter.show(0, 500);
-        break;
+        case 3: // negative values
+            Meter.use(STYLES.BAR, 0, -99);
+            basic.pause(1000);
+            for (let i = 0; i < 100; i++) {
+                Meter.show(-i);
+                basic.pause(70);
+            }
+            Meter.show(0, 500);
+            break;
 
-    case 4:  // partial range
-        Meter.use(STYLES.DIAL, 30, 70);
-        basic.pause(1000);
-        for (let i = 0; i < 100; i++) {
-            Meter.show(i);
-            basic.pause(100);
-        }
-        Meter.show(50, 500);
-        break;
+        case 4:  // partial range
+            Meter.use(STYLES.DIAL, 30, 70);
+            basic.pause(1000);
+            for (let i = 0; i < 100; i++) {
+                Meter.show(i);
+                basic.pause(100);
+            }
+            Meter.show(50, 500);
+            break;
 
-    case 5:  // angle
-        Meter.use(STYLES.NEEDLE, 0, 90);
-        basic.pause(1000);
-        for (let i = 0; i < 100; i++) {
-            Meter.show(i);
-            basic.pause(50);
-        }
-        Meter.show(45, 500);
-        break;
+        case 5:  // angle
+            Meter.use(STYLES.NEEDLE, 0, 90);
+            basic.pause(1000);
+            for (let i = 0; i < 100; i++) {
+                Meter.show(i);
+                basic.pause(50);
+            }
+            Meter.show(45, 500);
+            break;
 
-    case 6: // negative partial range
-        Meter.use(STYLES.TIDAL, -4.5, -9.5);
-        basic.pause(1000);
-        for (let i = 0; i < 100; i++) {
-            Meter.show(-i/10);
-            basic.pause(50);
-        }
-        Meter.show(0, 500);
-        break;
+        case 6: // negative partial range
+            Meter.use(STYLES.TIDAL, -4.5, -9.5);
+            basic.pause(1000);
+            for (let i = 0; i < 100; i++) {
+                Meter.show(-i / 10);
+                basic.pause(50);
+            }
+            Meter.show(0, 500);
+            break;
 
-    case 7:
-    // adjustments
-        Meter.use(STYLES.BAR, 0, 99);
-        basic.pause(1000);
-        Meter.show(75, 500);
-        Meter.wait();
-        basic.pause(1000);
+        case 7:
+            // adjustments
+            Meter.use(STYLES.BAR, 0, 99);
+            basic.pause(1000);
+            Meter.show(75, 500);
+            Meter.wait();
+            basic.pause(1000);
 
-        Meter.show(50, 500);
-        Meter.wait();
-        basic.pause(1000);
+            Meter.show(50, 500);
+            Meter.wait();
+            basic.pause(1000);
 
-    // with rangeErrors...
-        Meter.show(100, 500);
-        Meter.wait();
-        basic.pause(4000);
+            // with rangeErrors...
+            Meter.show(100, 500);
+            Meter.wait();
+            basic.pause(4000);
 
-        Meter.show(-1, 500);
-        Meter.wait();
-        basic.pause(2000);
+            Meter.show(-1, 500);
+            Meter.wait();
+            basic.pause(2000);
 
-        Meter.show(-1);
-        basic.pause(2000);
+            Meter.show(-1);
+            basic.pause(2000);
 
-        Meter.show(101);
-        break;
+            Meter.show(101);
+            break;
 
-    case 8:
-    // point upwards
-        Meter.use(STYLES.DIAL, 0, 360);
-        let gx = 0;
-        let gy = 0;
-        let angle = 0;
-        for (let i = 0; i < 50; i++) {
-            gx = input.acceleration(Dimension.X);
-            gy = input.acceleration(Dimension.Y);
-            angle = (Math.round(Math.atan2(gx, gy)*180/Math.PI)+360) % 360;
-            //basic.showNumber(angle);
-            Meter.show(360-angle, 300);
-            basic.pause(500);
-        }
-        break;
+        case 8:
+            // point upwards
+            Meter.use(STYLES.DIAL, 0, 360);
+            let gx = 0;
+            let gy = 0;
+            let angle = 0;
+            for (let i = 0; i < 50; i++) {
+                gx = input.acceleration(Dimension.X);
+                gy = input.acceleration(Dimension.Y);
+                angle = (Math.round(Math.atan2(gx, gy) * 180 / Math.PI) + 360) % 360;
+                //basic.showNumber(angle);
+                Meter.show(360 - angle, 300);
+                basic.pause(500);
+            }
+            break;
 
-    case 9:
-     // noise-meter
-     Meter.use(STYLES.BAR,0,200);
-        for (let i = 0; i < 100; i++) {
-            Meter.show(input.soundLevel());
-            basic.pause(200);
-        }
+        case 9:
+            // noise-meter
+            Meter.use(STYLES.BAR, 0, 200);
+            for (let i = 0; i < 100; i++) {
+                Meter.show(input.soundLevel());
+                basic.pause(200);
+            }
     }
 }
 let test = 0;
@@ -480,19 +485,19 @@ let topTest = 9;
 
 input.onButtonPressed(Button.A, function () {
     Meter.reset();
-    if (test > 0) { 
-        test--; 
+    if (test > 0) {
+        test--;
     }
-    basic.showNumber(test); 
+    basic.showNumber(test);
 });
 input.onButtonPressed(Button.B, function () {
     Meter.reset();
     if (test < topTest) {
-        test++; 
-    } 
-    basic.showNumber(test); 
+        test++;
+    }
+    basic.showNumber(test);
 });
 input.onButtonPressed(Button.AB, function () {
     Meter.reset();
-    doTest(test) 
+    doTest(test)
 });

@@ -366,55 +366,61 @@ function doTest(which: number) {
         }
         break;
 
-    case 1:
-        Meter.use(STYLES.TIDAL, 0, 24);
-        Meter.show(25, 12000);
-        pause(6000);
-        Meter.show(24, 12000);
+    case 1:  // fractional, adjusting over 9 seconds
+        Meter.use(STYLES.SPIRAL, 0, 1.0);
+        Meter.show(1.0, 9000);
+        Meter.wait();
+        Meter.show(0, 500);
         break;
 
-    case 2:
-        Meter.use(STYLES.BLOB, 0, 99);
+    case 2:  // reversed
+        Meter.use(STYLES.BLOB, 50, 0);
         basic.pause(1000);
         for (let i = 0; i < 100; i++) {
             Meter.show(i);
             basic.pause(100);
         }
+        Meter.show(0, 500);
         break;
 
-    case 3:
-        Meter.use(STYLES.BAR, 0, 99);
+    case 3: // negative values
+        Meter.use(STYLES.BAR, 0, -99);
         basic.pause(1000);
         for (let i = 0; i < 100; i++) {
-            Meter.show(i);
+            Meter.show(-i);
             basic.pause(70);
         }
+        Meter.show(0, 500);
         break;
 
-    case 4:
-        Meter.use(STYLES.DIAL, 0, 99);
+    case 4:  // partial range
+        Meter.use(STYLES.DIAL, 30, 70);
         basic.pause(1000);
         for (let i = 0; i < 100; i++) {
             Meter.show(i);
             basic.pause(100);
         }
+        Meter.show(50, 500);
         break;
 
-    case 5:
-        Meter.use(STYLES.NEEDLE, 0, 99);
+    case 5:  // angle
+        Meter.use(STYLES.NEEDLE, 0, 90);
         basic.pause(1000);
         for (let i = 0; i < 100; i++) {
             Meter.show(i);
             basic.pause(50);
         }
+        Meter.show(45, 500);
         break;
-    case 6:
-        Meter.use(STYLES.TIDAL, 0, 99);
+
+    case 6: // negative partial range
+        Meter.use(STYLES.TIDAL, -4.5, -9.5);
         basic.pause(1000);
         for (let i = 0; i < 100; i++) {
-            Meter.show(i);
+            Meter.show(-i/10);
             basic.pause(50);
         }
+        Meter.show(0, 500);
         break;
 
     case 7:
@@ -462,9 +468,9 @@ function doTest(which: number) {
 
     case 9:
      // noise-meter
-     Meter.use(STYLES.BAR,0,255);
-        for (let i = 0; i < 50; i++) {
-            Meter.show(input.soundLevel(),255);
+     Meter.use(STYLES.BAR,0,200);
+        for (let i = 0; i < 100; i++) {
+            Meter.show(input.soundLevel());
             basic.pause(200);
         }
     }
@@ -472,18 +478,21 @@ function doTest(which: number) {
 let test = 0;
 let topTest = 9;
 
-input.onButtonPressed(Button.A, function() { 
+input.onButtonPressed(Button.A, function () {
+    Meter.reset();
     if (test > 0) { 
         test--; 
     }
     basic.showNumber(test); 
 });
-input.onButtonPressed(Button.B, function() {
+input.onButtonPressed(Button.B, function () {
+    Meter.reset();
     if (test < topTest) {
         test++; 
     } 
     basic.showNumber(test); 
 });
-input.onButtonPressed(Button.AB, function() {
+input.onButtonPressed(Button.AB, function () {
+    Meter.reset();
     doTest(test) 
 });

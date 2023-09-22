@@ -133,8 +133,6 @@ namespace Meter {
     let rangeFixed = false;    // notify overflow/underflow
     let flashError = false;    // finalFrame was out of range before correction
     let flashUnlit = false;    // distinguish lit/unlit phase of flashing
-
-// declare some background variables...
     let adjusting = false; // true while adjusting intermediate frames
     let flashing = false;  // true while indicating frameError
     let firstFrame = 0;    // animation start-value
@@ -353,107 +351,139 @@ namespace Meter {
         // perform any required progressive adjustment or error-flashing as a background task
         control.inBackground(function () { animate() })
     }
-
 }
 
 
-// tests
-/***
+// T E S T S
+function doTest(which: number) {
+    switch (which) {
+    case 0:
+        Meter.digital();
+        basic.pause(1000);
+        for (let i = 0; i < 100; i++) {
+            Meter.show(i);
+            basic.pause(200);
+        }
+        break;
 
-Meter.use(STYLES.SPIRAL, 0, 24);
-Meter.show(25, 12000);
-pause(6000);
-Meter.show(24, 12000);
-basic.pause(1000);
+    case 1:
+        Meter.use(STYLES.TIDAL, 0, 24);
+        Meter.show(25, 12000);
+        pause(6000);
+        Meter.show(24, 12000);
+        break;
 
+    case 2:
+        Meter.use(STYLES.BLOB, 0, 99);
+        basic.pause(1000);
+        for (let i = 0; i < 100; i++) {
+            Meter.show(i);
+            basic.pause(100);
+        }
+        break;
 
-Meter.use(STYLES.BLOB, 0, 99);
-basic.pause(1000);
-for (let i = 0; i < 100; i++) {
-    Meter.show(i);
-    basic.pause(100);
+    case 3:
+        Meter.use(STYLES.BAR, 0, 99);
+        basic.pause(1000);
+        for (let i = 0; i < 100; i++) {
+            Meter.show(i);
+            basic.pause(70);
+        }
+        break;
+
+    case 4:
+        Meter.use(STYLES.DIAL, 0, 99);
+        basic.pause(1000);
+        for (let i = 0; i < 100; i++) {
+            Meter.show(i);
+            basic.pause(100);
+        }
+        break;
+
+    case 5:
+        Meter.use(STYLES.NEEDLE, 0, 99);
+        basic.pause(1000);
+        for (let i = 0; i < 100; i++) {
+            Meter.show(i);
+            basic.pause(50);
+        }
+        break;
+    case 6:
+        Meter.use(STYLES.TIDAL, 0, 99);
+        basic.pause(1000);
+        for (let i = 0; i < 100; i++) {
+            Meter.show(i);
+            basic.pause(50);
+        }
+        break;
+
+    case 7:
+    // adjustments
+        Meter.use(STYLES.BAR, 0, 99);
+        basic.pause(1000);
+        Meter.show(75, 500);
+        Meter.wait();
+        basic.pause(1000);
+
+        Meter.show(50, 500);
+        Meter.wait();
+        basic.pause(1000);
+
+    // with rangeErrors...
+        Meter.show(100, 500);
+        Meter.wait();
+        basic.pause(4000);
+
+        Meter.show(-1, 500);
+        Meter.wait();
+        basic.pause(2000);
+
+        Meter.show(-1);
+        basic.pause(2000);
+
+        Meter.show(101);
+        break;
+
+    case 8:
+    // point upwards
+        Meter.use(STYLES.DIAL, 0, 360);
+        let gx = 0;
+        let gy = 0;
+        let angle = 0;
+        for (let i = 0; i < 50; i++) {
+            gx = input.acceleration(Dimension.X);
+            gy = input.acceleration(Dimension.Y);
+            angle = (Math.round(Math.atan2(gx, gy)*180/Math.PI)+360) % 360;
+            //basic.showNumber(angle);
+            Meter.show(360-angle, 300);
+            basic.pause(500);
+        }
+        break;
+
+    case 9:
+     // noise-meter
+     Meter.use(STYLES.BAR,0,255);
+        for (let i = 0; i < 50; i++) {
+            Meter.show(input.soundLevel(),255);
+            basic.pause(200);
+        }
+    }
 }
-basic.pause(1000);
+let test = 0;
+let topTest = 9;
 
-Meter.use(STYLES.BAR, 0, 99);
-basic.pause(1000);
-for (let i = 0; i < 100; i++) {
-    Meter.show(i);
-    basic.pause(70);
-}
-basic.pause(1000); 
-
-Meter.use(STYLES.DIAL, 0, 99);
-basic.pause(1000);
-for (let i = 0; i < 100; i++) {
-    Meter.show(i);
-    basic.pause(100);
-}
-basic.pause(1000); 
-
-Meter.use(STYLES.NEEDLE, 0, 99);
-basic.pause(1000);
-for (let i = 0; i < 100; i++) {
-    Meter.show(i);
-    basic.pause(100);
-}
-basic.pause(1000); 
-
-Meter.use(STYLES.TIDAL, 0, 99);
-basic.pause(1000);
-for (let i = 0; i < 100; i++) {
-    Meter.show(i);
-    basic.pause(50);
-}
-basic.pause(1000);
-
-Meter.digital();
-basic.pause(1000);
-for (let i = 0; i < 100; i++) {
-    Meter.show(i);
-    basic.pause(200);
-}
-basic.pause(1000);
-
-****/
-/*
-Meter.use(STYLES.BAR, 0, 99);
-basic.pause(1000);
-Meter.show(75, 500);
-Meter.wait();
-basic.pause(1000);
-
-Meter.show(50, 500);
-Meter.wait();
-basic.pause(1000);
-
-Meter.show(100, 500);
-Meter.wait();
-basic.pause(4000);
-
-Meter.show(-1, 500);
-Meter.wait();
-basic.pause(2000);
-
-Meter.show(-1);
-basic.pause(2000);
-
-Meter.show(101);
-basic.pause(3000);
-
-Meter.reset();
-*/
-
-// map dial to accelerometer
-Meter.use(STYLES.DIAL, 0, 360);
-let gx = 0;
-let gy = 0;
-let angle = 0;
-basic.forever(function() {
-    gx = input.acceleration(Dimension.X);
-    gy = input.acceleration(Dimension.Y);
-    angle = (Math.round(Math.atan2(gx, gy)*180/Math.PI)+360) % 360;
-    //basic.showNumber(angle);
-    Meter.show(360-angle, 300);
-    basic.pause(500);
-})
+input.onButtonPressed(Button.A, function() { 
+    if (test > 0) { 
+        test--; 
+    }
+    basic.showNumber(test); 
+});
+input.onButtonPressed(Button.B, function() {
+    if (test < topTest) {
+        test++; 
+    } 
+    basic.showNumber(test); 
+});
+input.onButtonPressed(Button.AB, function() {
+    doTest(test) 
+});

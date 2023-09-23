@@ -112,8 +112,8 @@ const blobData = [
 const blobBound = 7;
 */
 
-//% color=#402080 weight=100 icon="\uf118" block="Meters" 
-namespace Meter {
+//% color=#402080 weight=100 icon="\uf0e4" block="meter" 
+namespace meter {
     let styleIs: number = digitStyle;
     let mapSet: number[] = digitMaps; // array of frame bit-maps
     let bound: number = digitBound;   // highest frame-index
@@ -259,7 +259,7 @@ namespace Meter {
         reset();
     }
 
-    //% block="Use %choice Meter to show values from $start to $limit" 
+    //% block="Use %choice meter to show values from $start to $limit" 
     //% start.defl=0
     //% limit.defl=20
     //% weight=90
@@ -363,101 +363,101 @@ namespace Meter {
 function doTest(which: number) {
     switch (which) {
         case 0:
-            Meter.digital();
+            meter.digital();
             basic.pause(1000);
             for (let i = 0; i < 100; i++) {
-                Meter.show(i);
+                meter.show(i);
                 basic.pause(200);
             }
             break;
 
         case 1:  // fractional, adjusting over 9 seconds
-            Meter.use(STYLES.SPIRAL, 0, 1.0);
-            Meter.show(1.0, 9000);
-            Meter.wait();
-            Meter.show(0, 500);
+            meter.use(STYLES.SPIRAL, 0, 1.0);
+            meter.show(1.0, 9000);
+            meter.wait();
+            meter.show(0, 500);
             break;
 
         case 2:  // reversed
-            Meter.use(STYLES.BLOB, 50, 0);
+            meter.use(STYLES.BLOB, 50, 0);
             basic.pause(1000);
             for (let i = 0; i < 100; i++) {
-                Meter.show(i);
+                meter.show(i);
                 basic.pause(100);
             }
-            Meter.show(0, 500);
+            meter.show(0, 500);
             break;
 
         case 3: // negative values
-            Meter.use(STYLES.BAR, 0, -99);
+            meter.use(STYLES.BAR, 0, -99);
             basic.pause(1000);
             for (let i = 0; i < 100; i++) {
-                Meter.show(-i);
+                meter.show(-i);
                 basic.pause(70);
             }
-            Meter.show(0, 500);
+            meter.show(0, 500);
             break;
 
         case 4:  // partial range
-            Meter.use(STYLES.DIAL, 30, 70);
+            meter.use(STYLES.DIAL, 30, 70);
             basic.pause(1000);
             for (let i = 0; i < 100; i++) {
-                Meter.show(i);
+                meter.show(i);
                 basic.pause(100);
             }
-            Meter.show(50, 500);
+            meter.show(50, 500);
             break;
 
         case 5:  // angle
-            Meter.use(STYLES.NEEDLE, 0, 90);
+            meter.use(STYLES.NEEDLE, 0, 90);
             basic.pause(1000);
             for (let i = 0; i < 100; i++) {
-                Meter.show(i);
+                meter.show(i);
                 basic.pause(50);
             }
-            Meter.show(45, 500);
+            meter.show(45, 500);
             break;
 
         case 6: // negative partial range
-            Meter.use(STYLES.TIDAL, -4.5, -9.5);
+            meter.use(STYLES.TIDAL, -4.5, -9.5);
             basic.pause(1000);
             for (let i = 0; i < 100; i++) {
-                Meter.show(-i / 10);
+                meter.show(-i / 10);
                 basic.pause(50);
             }
-            Meter.show(0, 500);
+            meter.show(0, 500);
             break;
 
         case 7:
             // adjustments
-            Meter.use(STYLES.BAR, 0, 99);
+            meter.use(STYLES.BAR, 0, 99);
             basic.pause(1000);
-            Meter.show(75, 500);
-            Meter.wait();
+            meter.show(75, 500);
+            meter.wait();
             basic.pause(1000);
 
-            Meter.show(50, 500);
-            Meter.wait();
+            meter.show(50, 500);
+            meter.wait();
             basic.pause(1000);
 
             // with rangeErrors...
-            Meter.show(100, 500);
-            Meter.wait();
+            meter.show(100, 500);
+            meter.wait();
             basic.pause(4000);
 
-            Meter.show(-1, 500);
-            Meter.wait();
+            meter.show(-1, 500);
+            meter.wait();
             basic.pause(2000);
 
-            Meter.show(-1);
+            meter.show(-1);
             basic.pause(2000);
 
-            Meter.show(101);
+            meter.show(101);
             break;
 
         case 8:
             // point upwards
-            Meter.use(STYLES.DIAL, 0, 360);
+            meter.use(STYLES.DIAL, 0, 360);
             let gx = 0;
             let gy = 0;
             let angle = 0;
@@ -466,16 +466,16 @@ function doTest(which: number) {
                 gy = input.acceleration(Dimension.Y);
                 angle = (Math.round(Math.atan2(gx, gy) * 180 / Math.PI) + 360) % 360;
                 //basic.showNumber(angle);
-                Meter.show(360 - angle, 300);
+                meter.show(360 - angle, 300);
                 basic.pause(500);
             }
             break;
 
         case 9:
             // noise-meter
-            Meter.use(STYLES.BAR, 0, 200);
+            meter.use(STYLES.BAR, 0, 200);
             for (let i = 0; i < 100; i++) {
-                Meter.show(input.soundLevel());
+                meter.show(input.soundLevel());
                 basic.pause(200);
             }
     }
@@ -484,20 +484,20 @@ let test = 0;
 let topTest = 9;
 
 input.onButtonPressed(Button.A, function () {
-    Meter.reset();
+    meter.reset();
     if (test > 0) {
         test--;
     }
     basic.showNumber(test);
 });
 input.onButtonPressed(Button.B, function () {
-    Meter.reset();
+    meter.reset();
     if (test < topTest) {
         test++;
     }
     basic.showNumber(test);
 });
 input.onButtonPressed(Button.AB, function () {
-    Meter.reset();
+    meter.reset();
     doTest(test)
 });

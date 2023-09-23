@@ -1,7 +1,7 @@
 ```package
 morse=github:grandpabond/pxt-meter
 ```
-#Meter - Adding values to your project!
+#meter - Adding values to your project!
 
 Many microbit projects are about taking measurements. The datalogger extension lets you make a historical record 
 of your measurements, but your project can be brought to life by adding a real-time visual indicator.
@@ -17,8 +17,25 @@ which should lie in the range [0...99]. For many purposes 2 digits provide adequ
 and the digital display is especially useful in representing percentages.
 
 ### ~reminder
-NOTE:  Since each digit must be represented in only 10 pixels, they are inevitably somewhat stylized,  and take a bit of practice to read accurately, especially zeroes and eights!
+NOTE:  Since each digit must be represented in only 10 pixels, they are inevitably somewhat stylized,  
+and take a bit of practice to read accurately, especially zeroes and eights!
 ### ~
+
+# Displaying a new value #meter-show
+```sig
+meter.show(value,  ms)
+```
+The function ``||meter:show()||`` adjusts the meter to show a new reading.
+
+  ``||meter:value||``- is the new value to be indicated.
+
+  ``||meter:ms||`` - is optionally used to control the speed of an animated adjustment to the new value. 
+  It shows intermediate values leading to the new ``||meter:value||`` after ms millisecs. 
+  (This background animation only occurs if ``||meter:ms||`` exceeds 50ms).
+
+## Range-checks
+Any attempt to show a value that lies outside the [``||meter:start||``...``||meter:limit||``] range will be constrained 
+to the nearest bound, but will flash to indicate the out-of-range error.
 
 # Choosing an analogue meter #meter-use
 ```sig
@@ -34,26 +51,17 @@ The function ``||meter:use()||`` selects one of a number of possible analoge vis
 ``||meter:limit||`` - is the value that maps to the top reading
 
 ### ~reminder
-The operating range is completely flexible: it is quite permissible for ``||meter:start||`` to 
-exceed ``||meter:limit||``, or for either (or both) to be negative. They need not be whole numbers either: 
+The operating range for analogue displays is completely flexible: it is quite permissible for ``||meter:start||`` 
+to exceed ``||meter:limit||``, or for either (or both) to be negative. They need not be whole numbers either: 
 fractional values are quite OK.
 ### ~
 
-# Displaying a new value #meter-show
-```sig
-meter.show(value,  ms)
-```
-The function ``||meter:show()||`` adjusts the meter to show a new reading.
-  ``||meter:value||``- is the new value to be indicated.
-  ``||meter:ms||`` - is optionally used to control the speed of an animated adjustment to the new value. shows  intermediate values leading to the new ``||meter:value||``.  after ms millisecs. This background animation only occurs if ms exceeds 50ms.
 
-## Range-checks
-Any attempt to show a value that is outside the [``||meter:start||``...``||meter:limit||``] range will be constrained 
-to the nearest bound, but will flash to indicate the out-of-range error.
 
-Styles:
+## Styles:
 ``||meter:BAR||``:
-This meter style is similar to the built-in bar-graph function, filling up each row in turn from the bottom, with 1, 3, or 5 centred pixels, giving a total of 15 distinct displays.
+This meter style is similar to the built-in bar-graph function, filling up each row in turn from the bottom, 
+with 1, 3, or 5 centred pixels, giving a total of 15 distinct displays.
 
 ``||meter:DIAL||``
 This meter style shows a short 3-pixel pointer rotating from the 12 o'clock position through 24 different angles.
@@ -69,7 +77,6 @@ This meter style is a simple centred disc that grows from a single pixel to fill
 
 ``||meter:SPIRAL||``:
 This meter style is similar to the BLOB but winds round clockwise in a spiral to fill the screen in 25 steps.
-
 
 # Resetting the meter #meter-reset
 ```sig
@@ -89,7 +96,7 @@ This function suspends your code until any background animated adjustment has re
 meter.stop()
 ```
 This function stops any background animated adjustment immediately, wherever it has got to. 
-(It may not yet have reached the new value.)
+(So it may not yet have reached the new value.)
 
 
 
